@@ -1,0 +1,9 @@
+*.pyc
+*.spec
+friend_list
+owned_game
+player_summaries
+detail
+steamspy.json
+build
+dist
