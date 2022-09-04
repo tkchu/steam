@@ -3,8 +3,6 @@ import urllib2
 import time
 import pymongo
 
-#myclient = pymongo.MongoClient('mongodb://34.82.145.144:27017/')
-#myclient = pymongo.MongoClient('mongodb://35.203.162.155:27017/')
 myclient = pymongo.MongoClient('mongodb://localhost:27017/')
 
 mydb = myclient["remote"]

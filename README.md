@@ -12,3 +12,4 @@ steam数据爬虫是为了获得steam上优秀但未曾获得关注的游戏。
 
 app.py 寻找所有的steam游戏，以及该游戏的介绍
 conf.py 一些通用函数
+review.py 寻找游戏的玩家评论

@@ -4,6 +4,7 @@
 """
 from conf import *
 import json
+import datetime
 
 APPLIST_URL = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
 DETAIL_URL = "http://store.steampowered.com/api/appdetails/?appids={0}"
@@ -56,36 +57,46 @@ if __name__ == '__main__':
     for i, appid in enumerate(allappids):
         print str(appid) + ":" + str(i) + "/" + str(len(allappids))
         oldInfo = myinfo.find_one({"appid": appid})
-        if oldInfo and "type" in oldInfo and oldInfo["type"] != False:
-        # 如果已经有了，那就不用重新获取了
+        newInfo = {"last_update_time":datetime.datetime.now()}
+        # 更新detail
+
+        if oldInfo and "type" in oldInfo and oldInfo["type"] == False:
+        # 如果之前获取失败了，那就不用重新获取了
             continue
-        if oldInfo and 'try_times' in oldInfo and oldInfo['try_times']>5:
+
+        if oldInfo and 'try_times' in oldInfo and oldInfo['try_times']>=5:
         # 如果尝试的次数很多，那也别试了
             print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":already try " + str(oldInfo['try_times']) + " times"
             continue
+
+        if oldInfo and "last_update_time" in oldInfo and (newInfo["last_update_time"] - oldInfo['last_update_time']).days < 3:
+            print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":last_update_time" + str(oldInfo['last_update_time']) + "" 
+            continue
+
         detail = getDetail(appid)
-        status = getStatus(appid)
-        if not detail or not status:
+        if not detail:
             try:
                 if not oldInfo:
-                    newInfo = {"appid":appid,"type":False,"try_times":1}
+                    newInfo = merge_two_dicts(newInfo, {"appid":appid,"type":False,"try_times":1})
                     myinfo.insert_one(newInfo)
-                    print("insert_one:" + str(appid))
+                    print("insert_False_detail:" + str(appid))
                 elif oldInfo['type'] == False:
                     myinfo.update_one({"appid":appid}, {'$inc': {'try_times': 1}})
-                    print("update_one:" + str(appid))
+                    print("update_False_detail:" + str(appid))
+                continue
             except Exception as e:
                 pass
 
-        else:
-            newInfo = merge_two_dicts(detail,status)
+        status = getStatus(appid)
+        if status:
+            newInfo = merge_two_dicts(newInfo, merge_two_dicts(detail,status))
             try:
                 if oldInfo:
-                    if oldInfo['type'] == False:
-                        myinfo.delete_one({"appid":appid})
-                        myinfo.insert_one(newInfo)
+                    myinfo.delete_one({"appid":appid})
+                    myinfo.insert_one(newInfo)
+                    print("replace_one:" + str(appid))
                 else:
                     myinfo.insert_one(newInfo)
-                print("insert_one:" + str(appid))
+                    print("insert_new:" + str(appid))
             except Exception as e:
                 pass
