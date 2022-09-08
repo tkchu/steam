@@ -79,24 +79,29 @@ if __name__ == '__main__':
                 if not oldInfo:
                     newInfo = merge_two_dicts(newInfo, {"appid":appid,"type":False,"try_times":1})
                     myinfo.insert_one(newInfo)
-                    print("insert_False_detail:" + str(appid))
+                    print "insert_False_detail:" + str(appid)
                 elif oldInfo['type'] == False:
                     myinfo.update_one({"appid":appid}, {'$inc': {'try_times': 1}})
-                    print("update_False_detail:" + str(appid))
+                    print "update_False_detail:" + str(appid)
                 continue
             except Exception as e:
                 pass
 
-        status = getStatus(appid)
+        status = {}
+        if detail["type"] == "game":
+            status = getStatus(appid)
+
         if status:
             newInfo = merge_two_dicts(newInfo, merge_two_dicts(detail,status))
             try:
                 if oldInfo:
                     myinfo.delete_one({"appid":appid})
                     myinfo.insert_one(newInfo)
-                    print("replace_one:" + str(appid))
+                    print "replace_one:" + str(appid)
                 else:
                     myinfo.insert_one(newInfo)
-                    print("insert_new:" + str(appid))
+                    print "insert_new:" + str(appid)
             except Exception as e:
                 pass
+        else:
+            print "Get No Status"
