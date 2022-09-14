@@ -58,10 +58,13 @@ if __name__ == '__main__':
         print str(appid) + ":" + str(i) + "/" + str(len(allappids))
         oldInfo = myinfo.find_one({"appid": appid})
         newInfo = {"last_update_time":datetime.datetime.now()}
-        # 更新detail
+        
+        if oldInfo:
+            continue
 
         if oldInfo and "type" in oldInfo and oldInfo["type"] == False:
         # 如果之前获取失败了，那就不用重新获取了
+            print str(appid) + ": False"
             continue
 
         if oldInfo and 'try_times' in oldInfo and oldInfo['try_times']>=5:
@@ -69,8 +72,14 @@ if __name__ == '__main__':
             print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":already try " + str(oldInfo['try_times']) + " times"
             continue
 
-        if oldInfo and "last_update_time" in oldInfo and (newInfo["last_update_time"] - oldInfo['last_update_time']).days < 3:
+        if oldInfo and "last_update_time" in oldInfo and (newInfo["last_update_time"] - oldInfo['last_update_time']).days < 7:
+        # 如果上次获取是在一周以内，那也别获取了
             print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":last_update_time" + str(oldInfo['last_update_time']) + "" 
+            continue
+
+        if oldInfo and "type" in oldInfo and oldInfo["type"] != "game":
+        # 如果之前获取过这个不是游戏，那就不用重新获取了
+            print str(appid) + ": No game"
             continue
 
         detail = getDetail(appid)
@@ -95,12 +104,11 @@ if __name__ == '__main__':
             newInfo = merge_two_dicts(newInfo, merge_two_dicts(detail,status))
             try:
                 if oldInfo:
-                    myinfo.delete_one({"appid":appid})
-                    myinfo.insert_one(newInfo)
-                    print "replace_one:" + str(appid)
+                    myinfo.update_one({"appid":appid},{"$set":newInfo},upsert=True)
+                    print "update_Old_Info:" + str(appid)
                 else:
                     myinfo.insert_one(newInfo)
-                    print "insert_new:" + str(appid)
+                    print "insert_New_Info:" + str(appid)
             except Exception as e:
                 pass
         else:

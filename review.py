@@ -13,35 +13,58 @@ import time
 REVIEW_URL = "https://store.steampowered.com/appreviews/{0}?json=1&language=all&filter=recent&cursor={1}&num_per_page=100&review_type=all&purchase_type=all"
 # 此api每天仅能调用100000次，见 https://steamcommunity.com/dev/apiterms
 
+def updateTotalReview(appid, reviewListJson):
+    reviewStatus = {}
+    reviewStatus["total_positive"] = reviewListJson["query_summary"]["total_positive"]
+    reviewStatus["total_negative"] = reviewListJson["query_summary"]["total_negative"]
+    reviewStatus["total_reviews"] = reviewListJson["query_summary"]["total_reviews"]
+
+    myquery = {"appid":appid}
+    newvalues = {"$set":reviewStatus}
+
+    myinfo.update_one(myquery, newvalues, upsert = True)
+
 count = 0
-countMax = 40000
-def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
-    #根据AppID，游标来查询，返回下一个游标，如果出问题，则返回None
-    #如果 findSameReviewAndBreak为真，当找到一样ID的Review时，返回当前游标而不是继续下去
+countMax = 100000
+countTime = datetime.datetime.now()
+
+def CheckAPILimit():
     global count
     global countMax
+    global countTime
+    if (datetime.datetime.now()- countTime).days>1:
+        countTime = datetime.datetime.now()
+        count = 0
     count += 1
-    if count >= countMax:
-        print "API Limit Break"
-        return -1
-    print "get reviews appid:"+str(appid)+"::"+str(cursor)
+    return count >= countMax
 
-    reviewList = None
+def getReviewList(appid, cursor):
+    reviewListJson = None
     try:
         url = REVIEW_URL.format(appid, urllib.quote_plus(cursor))
         response = urllib2.urlopen(url)
         if response:
-            reviewList = response.read()
-        else:
-            return None
+            reviewListJson = json.loads(response.read().decode("utf8"))
+            if reviewListJson["success"] != 1:
+                reviewListJson = None
     except Exception as e:
         print e
+    return reviewListJson
 
-    if not reviewList:
-        return None
-    reviewListJson = json.loads(reviewList.decode("utf8"))
-    if reviewListJson["success"] != 1:
-        return None
+def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
+    #根据AppID，游标来查询，返回下一个游标，如果出问题，则返回None
+    #如果 findSameReviewAndBreak为真，当找到一样ID的Review时，返回当前游标而不是继续下去
+    if CheckAPILimit():
+        print "API Limit Break"
+        return -1
+
+    print "try get reviews appid:"+str(appid)+"::"+str(cursor)
+
+    reviewListJson = getReviewList(appid, cursor)
+
+    if cursor == "*":
+        updateTotalReview(appid, reviewListJson)
+
     for review in reviewListJson["reviews"]:
         review["appid"] = appid
         review["review_id"] = str(appid)+":"+str(review["recommendationid"])
@@ -56,53 +79,56 @@ def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
                 myreview.insert_one(review)
         except Exception as e:
             print e
-            pass
     return reviewListJson["cursor"]
 
+def checkFindSameReviewAndBreak(appidInfo):
+    #如果之前有update，那么找到相同的review就结束并返回
+    result = False
+    if "review_update_time" in appInfo and (datetime.datetime.now()- appInfo["review_update_time"]).days < 30:
+        print "already get when {0}".format(appInfo["review_update_time"])
+        result = True
+    return result
+
 def getAppReview(appidInfo):
-    appid = appInfo['appid']
-    print "="*5 + str(appid) + ":" + "review" + "="*5
-
-    if "total_reviews" not in appInfo:
+    findSameReviewAndBreak = checkFindSameReviewAndBreak(appidInfo)
+    
+    if "total_reviews" not in appInfo or findSameReviewAndBreak:
+        # 临时处理，目前只要有review就直接返回，也不处理appinfo不全的
         return None
-
-    findSameReviewAndBreak = False
-    if "review_update_time" in appInfo:
-        if (datetime.datetime.now()- appInfo["review_update_time"]).days < 3:
-            return None
-        else:
-            findSameReviewAndBreak = True
-
+    
+    appid = appInfo['appid']
     reviewNum = appInfo["total_reviews"]
-    cursor = "*"
+    print "appid:{0}:review:{1}:{2}".format(appid,reviewNum,time.strftime('%Y-%m-%d %H:%M:%S'))
 
-    print "reviews:" + str(appid) + ":" +str(reviewNum) + ":" + time.strftime('%Y-%m-%d %H:%M:%S')
+    cursor = "*"
     while True:
         newCursor = getOneAppReview(appid, cursor, findSameReviewAndBreak)
         if newCursor == None:
-            break
+            return None
         if newCursor == -1:
             return -1
         if newCursor == cursor:
             myinfo.update_one({"appid":appid}, {"$set":{'review_update_time': datetime.datetime.now()}})
-            break
-        cursor = newCursor
-    return None
+            return None
 
-if __name__ == '__main__':
-    count = 0
-    #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":1000}})]
-    appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":2000,"$lt":12000},"last_update_time":{"$exists":True}})]
+        cursor = newCursor
+
+def getAppInfos():
+    appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":40000,"$lt":50000}})]
+    #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":2000,"$lt":12000},"last_update_time":{"$exists":True}})]
     #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$exists":True} })]
     #appInfos = [x for x in myinfo.find({"appid":1076600})]
     appInfosLen = len(appInfos)
     reviewsCount = sum([info["total_reviews"] for info in appInfos])
-    print "{0} app will get {1} reviews".format(appInfosLen, reviewsCount)
-    print reviewsCount/100000/100.0
+    print "{0} app will get {1} reviews, take {2} days to run".format(appInfosLen, reviewsCount,reviewsCount/1000000/100.0)
+    return appInfos
 
+if __name__ == '__main__':
+    count = 0
+    appInfos = getAppInfos()
+    appInfosLen = len(appInfos)
     for i,appInfo in enumerate(appInfos):
-        print "appid:" + str(appInfo['appid']) + ":" + str(i) + '/' + str(appInfosLen)
-        
+        print "====appid now {0} is {1}/{2}=====".format(appInfo['appid'], i, appInfosLen)
         appLimit = getAppReview(appInfo)
         if appLimit == -1:
             break
