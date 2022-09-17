@@ -21,17 +21,18 @@ def updateTotalReview(appid, reviewListJson):
 
     myquery = {"appid":appid}
     newvalues = {"$set":reviewStatus}
-
     myinfo.update_one(myquery, newvalues, upsert = True)
+
+    total_review = reviewStatus["total_reviews"]
+    print "appid:{0}:review:{1}:{2}".format(appid,total_review,time.strftime('%Y-%m-%d %H:%M:%S'))
+    return total_review
 
 count = 0
 countMax = 100000
 countTime = datetime.datetime.now()
 
 def CheckAPILimit():
-    global count
-    global countMax
-    global countTime
+    global count, countMax, countTime
     if (datetime.datetime.now()- countTime).days>1:
         countTime = datetime.datetime.now()
         count = 0
@@ -51,6 +52,8 @@ def getReviewList(appid, cursor):
         print e
     return reviewListJson
 
+appcount = 0
+appreview = 0
 def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
     #根据AppID，游标来查询，返回下一个游标，如果出问题，则返回None
     #如果 findSameReviewAndBreak为真，当找到一样ID的Review时，返回当前游标而不是继续下去
@@ -58,12 +61,16 @@ def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
         print "API Limit Break"
         return -1
 
-    print "try get reviews appid:"+str(appid)+"::"+str(cursor)
-
     reviewListJson = getReviewList(appid, cursor)
+    if not reviewListJson:
+        return None
 
+    global appcount,appreview
     if cursor == "*":
-        updateTotalReview(appid, reviewListJson)
+        appcount = 0
+        appreview = updateTotalReview(appid, reviewListJson)
+    appcount +=1
+    print "try get reviews appid:{0}::{1}:{2}/{3}".format(appid,cursor, appcount, (appreview-1)/100+2)
 
     for review in reviewListJson["reviews"]:
         review["appid"] = appid
@@ -92,15 +99,12 @@ def checkFindSameReviewAndBreak(appidInfo):
 def getAppReview(appidInfo):
     findSameReviewAndBreak = checkFindSameReviewAndBreak(appidInfo)
     
-    if "total_reviews" not in appInfo or findSameReviewAndBreak:
-        # 临时处理，目前只要有review就直接返回，也不处理appinfo不全的
+    if findSameReviewAndBreak:
+        # TEMP临时处理，目前只要有review就直接返回，而不是按道理的一直到找到重复的再返回
         return None
-    
-    appid = appInfo['appid']
-    reviewNum = appInfo["total_reviews"]
-    print "appid:{0}:review:{1}:{2}".format(appid,reviewNum,time.strftime('%Y-%m-%d %H:%M:%S'))
-
+    appid = appidInfo["appid"]
     cursor = "*"
+
     while True:
         newCursor = getOneAppReview(appid, cursor, findSameReviewAndBreak)
         if newCursor == None:
@@ -114,13 +118,10 @@ def getAppReview(appidInfo):
         cursor = newCursor
 
 def getAppInfos():
-    appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":40000,"$lt":50000}})]
+    appInfos = [x for x in myinfo.find({"type":"game","review_update_time":{"$exists":False},"is_free":False})]
     #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":2000,"$lt":12000},"last_update_time":{"$exists":True}})]
     #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$exists":True} })]
     #appInfos = [x for x in myinfo.find({"appid":1076600})]
-    appInfosLen = len(appInfos)
-    reviewsCount = sum([info["total_reviews"] for info in appInfos])
-    print "{0} app will get {1} reviews, take {2} days to run".format(appInfosLen, reviewsCount,reviewsCount/1000000/100.0)
     return appInfos
 
 if __name__ == '__main__':

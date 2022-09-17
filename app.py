@@ -8,7 +8,6 @@ import datetime
 
 APPLIST_URL = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
 DETAIL_URL = "http://store.steampowered.com/api/appdetails/?appids={0}"
-REVIEW_URL = "https://store.steampowered.com/appreviews/{0}?json=1&language=all&filter=recent&start_offset={1}&num_per_page={2}&review_type=all&purchase_type=all"
 
 def getAppids():
     """获取所有steam游戏列表"""
@@ -36,80 +35,60 @@ def getDetail(appid):
     else:
         return None
 
-def getStatus(appid):
-    """获取某一steam游戏的review简介
-    total_positive:640530,
-    total_negative:40469,
-    total_reviews:680999
-    """
-    response = send_req(REVIEW_URL.format(appid, 0, 0))
-    if not response:
-        return
-    reviewListJson = json.loads(response.decode("utf8"))
-    if reviewListJson["success"] == 1:
-        reviewListJson["query_summary"]["appid"] = appid
-        return reviewListJson["query_summary"]
+def checkNeedUpdateAppid(appid):
+    result = True
+    oldInfo = myinfo.find_one({"appid": appid})
+    if oldInfo:
+        result = False
+    return result
+
+    if oldInfo and "type" in oldInfo and oldInfo["type"] == False:
+    # 如果之前获取失败了，那就不用重新获取了
+        print str(appid) + ": False"
+
+    if oldInfo and 'try_times' in oldInfo and oldInfo['try_times']>=5:
+    # 如果尝试的次数很多，那也别试了
+        print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":already try " + str(oldInfo['try_times']) + " times"
+
+    if oldInfo and "last_update_time" in oldInfo and (newInfo["last_update_time"] - oldInfo['last_update_time']).days < 7:
+    # 如果上次获取是在一周以内，那也别获取了
+        print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":last_update_time" + str(oldInfo['last_update_time']) + "" 
+
+    if oldInfo and "type" in oldInfo and oldInfo["type"] != "game":
+    # 如果之前获取过这个不是游戏，那就不用重新获取了
+        print str(appid) + ": No game"
+
+def updateDetail(appid, detail):
+    newInfo = {"last_update_time":datetime.datetime.now()}
+    oldInfo = myinfo.find_one({"appid":appid})
+    if not detail:
+        try:
+            if not oldInfo:
+                newInfo = merge_two_dicts(newInfo, {"appid":appid,"type":False,"try_times":1})
+                myinfo.insert_one(newInfo)
+                print "insert_False_detail:" + str(appid)
+            elif oldInfo['type'] == False:
+                myinfo.update_one({"appid":appid}, {'$inc': {'try_times': 1}})
+                print "update_False_detail:" + str(appid)
+        except Exception as e:
+            print e
     else:
-        return None
+        newInfo = merge_two_dicts(newInfo, detail)
+        try:
+            if oldInfo:
+                myinfo.update_one({"appid":appid},{"$set":newInfo},upsert=True)
+                print "update_Old_Info:" + str(appid)
+            else:
+                myinfo.insert_one(newInfo)
+                print "insert_New_Info:" + str(appid)
+        except Exception as e:
+            print e
 
 if __name__ == '__main__':
     allappids = getAppids()
     for i, appid in enumerate(allappids):
-        print str(appid) + ":" + str(i) + "/" + str(len(allappids))
-        oldInfo = myinfo.find_one({"appid": appid})
-        newInfo = {"last_update_time":datetime.datetime.now()}
-        
-        if oldInfo:
-            continue
-
-        if oldInfo and "type" in oldInfo and oldInfo["type"] == False:
-        # 如果之前获取失败了，那就不用重新获取了
-            print str(appid) + ": False"
-            continue
-
-        if oldInfo and 'try_times' in oldInfo and oldInfo['try_times']>=5:
-        # 如果尝试的次数很多，那也别试了
-            print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":already try " + str(oldInfo['try_times']) + " times"
-            continue
-
-        if oldInfo and "last_update_time" in oldInfo and (newInfo["last_update_time"] - oldInfo['last_update_time']).days < 7:
-        # 如果上次获取是在一周以内，那也别获取了
-            print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":last_update_time" + str(oldInfo['last_update_time']) + "" 
-            continue
-
-        if oldInfo and "type" in oldInfo and oldInfo["type"] != "game":
-        # 如果之前获取过这个不是游戏，那就不用重新获取了
-            print str(appid) + ": No game"
-            continue
-
-        detail = getDetail(appid)
-        if not detail:
-            try:
-                if not oldInfo:
-                    newInfo = merge_two_dicts(newInfo, {"appid":appid,"type":False,"try_times":1})
-                    myinfo.insert_one(newInfo)
-                    print "insert_False_detail:" + str(appid)
-                elif oldInfo['type'] == False:
-                    myinfo.update_one({"appid":appid}, {'$inc': {'try_times': 1}})
-                    print "update_False_detail:" + str(appid)
-                continue
-            except Exception as e:
-                pass
-
-        status = {}
-        if detail["type"] == "game":
-            status = getStatus(appid)
-
-        if status:
-            newInfo = merge_two_dicts(newInfo, merge_two_dicts(detail,status))
-            try:
-                if oldInfo:
-                    myinfo.update_one({"appid":appid},{"$set":newInfo},upsert=True)
-                    print "update_Old_Info:" + str(appid)
-                else:
-                    myinfo.insert_one(newInfo)
-                    print "insert_New_Info:" + str(appid)
-            except Exception as e:
-                pass
+        if not checkNeedUpdateAppid(appid):
+            print "appid:{0}:{1}/{2} no need update".format(appid,i,len(allappids))
         else:
-            print "Get No Status"
+            detail = getDetail(appid)
+            updateDetail(appid, detail)
