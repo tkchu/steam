@@ -6,7 +6,8 @@ import json
 from conf import *
 from app import *
 from review import *
-
+if __name__ == '__main__':
+    print(myinfo.delete_many({"appid":{"$exists":False}}).deleted_count)
 """
 获得所有动作策略游戏
     appInfos = myinfo.find({'total_reviews':{'$gt':100}})

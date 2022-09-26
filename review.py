@@ -32,6 +32,7 @@ countMax = 100000
 countTime = datetime.datetime.now()
 
 def CheckAPILimit():
+    return False
     global count, countMax, countTime
     if (datetime.datetime.now()- countTime).days>1:
         countTime = datetime.datetime.now()
@@ -91,19 +92,18 @@ def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
 def checkFindSameReviewAndBreak(appidInfo):
     #如果之前有update，那么找到相同的review就结束并返回
     result = False
-    if "review_update_time" in appInfo and (datetime.datetime.now()- appInfo["review_update_time"]).days < 30:
-        print "already get when {0}".format(appInfo["review_update_time"])
+    if "review_update_time" in appidInfo and (datetime.datetime.now()- appidInfo["review_update_time"]).days < 30:
+        print "already get when {0}".format(appidInfo["review_update_time"])
         result = True
     return result
 
-def getAppReview(appidInfo):
+def getAppReview(appidInfo, cursor="*"):
     findSameReviewAndBreak = checkFindSameReviewAndBreak(appidInfo)
     
     if findSameReviewAndBreak:
         # TEMP临时处理，目前只要有review就直接返回，而不是按道理的一直到找到重复的再返回
         return None
     appid = appidInfo["appid"]
-    cursor = "*"
 
     while True:
         newCursor = getOneAppReview(appid, cursor, findSameReviewAndBreak)
@@ -117,19 +117,27 @@ def getAppReview(appidInfo):
 
         cursor = newCursor
 
-def getAppInfos():
-    appInfos = [x for x in myinfo.find({"type":"game","review_update_time":{"$exists":False},"is_free":False})]
+def getAppReviewByID(appid, cursor ="*"):
+    info = myinfo.find_one({"appid":appid})
+    return getAppReview(info,cursor)
+
+def getAppids():
+    appInfos = [ x for x in myinfo.find({"type":"game","review_update_time":{"$exists":False}})]
+    #appInfos = [ x for x in myinfo.find({"type":"game","review_update_time":{"$exists":False},"is_free":False })]
     #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":2000,"$lt":12000},"last_update_time":{"$exists":True}})]
     #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$exists":True} })]
     #appInfos = [x for x in myinfo.find({"appid":1076600})]
-    return appInfos
+    appids = [x['appid'] for x in appInfos if 'appid' in x]
+    return appids
 
 if __name__ == '__main__':
+    #getAppReviewByID(730,"AoJ4ibXD3tICfIKeUA==")
+    
     count = 0
-    appInfos = getAppInfos()
-    appInfosLen = len(appInfos)
-    for i,appInfo in enumerate(appInfos):
-        print "====appid now {0} is {1}/{2}=====".format(appInfo['appid'], i, appInfosLen)
-        appLimit = getAppReview(appInfo)
+    appids = sorted(getAppids())
+    appidsLen = len(appids)
+    for i,appid in enumerate(appids):
+        print "====appid now {0} is {1}/{2}=====".format(appid, i, appidsLen)
+        appLimit = getAppReviewByID(appid)
         if appLimit == -1:
             break

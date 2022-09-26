@@ -36,30 +36,36 @@ def getDetail(appid):
         return None
 
 def checkNeedUpdateAppid(appid):
-    result = True
     oldInfo = myinfo.find_one({"appid": appid})
-    if oldInfo:
-        result = False
-    return result
+
+    if not oldInfo:
+        return True
+    if oldInfo and "appid" not in oldInfo:
+        return True
+    if oldInfo and "type" in oldInfo and oldInfo["type"] == "game" and "last_update_time" in oldInfo and (datetime.datetime.now() - oldInfo['last_update_time']).days > 30:
+        return True
 
     if oldInfo and "type" in oldInfo and oldInfo["type"] == False:
     # 如果之前获取失败了，那就不用重新获取了
-        print str(appid) + ": False"
-
-    if oldInfo and 'try_times' in oldInfo and oldInfo['try_times']>=5:
-    # 如果尝试的次数很多，那也别试了
-        print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":already try " + str(oldInfo['try_times']) + " times"
-
-    if oldInfo and "last_update_time" in oldInfo and (newInfo["last_update_time"] - oldInfo['last_update_time']).days < 7:
-    # 如果上次获取是在一周以内，那也别获取了
-        print str(appid) + ":" + str(i) + "/" + str(len(allappids)) + ":last_update_time" + str(oldInfo['last_update_time']) + "" 
-
-    if oldInfo and "type" in oldInfo and oldInfo["type"] != "game":
+        #print str(appid) + ": False"
+        return False
+    elif oldInfo and "type" in oldInfo and oldInfo["type"] != "game":
     # 如果之前获取过这个不是游戏，那就不用重新获取了
-        print str(appid) + ": No game"
+        #print str(appid) + ": No game"
+        return False
+    elif oldInfo and 'try_times' in oldInfo and oldInfo['try_times']>=5:
+    # 如果尝试的次数很多，那也别试了
+        #print str(appid) + ":already try " + str(oldInfo['try_times']) + " times"
+        return False
+    elif oldInfo and "last_update_time" in oldInfo and (datetime.datetime.now() - oldInfo['last_update_time']).days < 30:
+    # 如果上次获取是在一周以内，那也别获取了
+        #print str(appid) + ":last_update_time" + str(oldInfo['last_update_time']) 
+        return False
+
+    return False
 
 def updateDetail(appid, detail):
-    newInfo = {"last_update_time":datetime.datetime.now()}
+    newInfo = {"appid":appid,"last_update_time":datetime.datetime.now()}
     oldInfo = myinfo.find_one({"appid":appid})
     if not detail:
         try:
@@ -85,10 +91,9 @@ def updateDetail(appid, detail):
             print e
 
 if __name__ == '__main__':
-    allappids = getAppids()
+    #allappids = getAppids()
+    allappids = [x for x in getAppids() if checkNeedUpdateAppid(x)]
     for i, appid in enumerate(allappids):
-        if not checkNeedUpdateAppid(appid):
-            print "appid:{0}:{1}/{2} no need update".format(appid,i,len(allappids))
-        else:
-            detail = getDetail(appid)
-            updateDetail(appid, detail)
+        print "====appid:{0}:{1}/{2}====".format(appid,i,len(allappids))
+        detail = getDetail(appid)
+        updateDetail(appid, detail)
