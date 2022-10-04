@@ -42,8 +42,14 @@ def checkNeedUpdateAppid(appid):
         return True
     if oldInfo and "appid" not in oldInfo:
         return True
-    if oldInfo and "type" in oldInfo and oldInfo["type"] == "game" and "last_update_time" in oldInfo and (datetime.datetime.now() - oldInfo['last_update_time']).days > 30:
-        return True
+    if oldInfo and "type" in oldInfo and oldInfo["type"] == "game":
+        if "last_update_time" in oldInfo and (datetime.datetime.now() - oldInfo['last_update_time']).days > 30:
+            return True
+        if "price_overview" in oldInfo and "currency" in oldInfo["price_overview"] and oldInfo["price_overview"]["currency"] != "USD":
+            #return True
+            pass
+    
+    return False
 
     if oldInfo and "type" in oldInfo and oldInfo["type"] == False:
     # 如果之前获取失败了，那就不用重新获取了

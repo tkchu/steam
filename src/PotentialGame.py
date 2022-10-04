@@ -12,7 +12,7 @@ myreview = myclient["steam"]['reviews']
 
 d = {}
 
-for review in myreview.find( {"language":"english", "review":{"$regex":"fun"}}):
+for review in myreview.find( {"language":"english", "review":{"$regex":"addict"}}):
     app = myapp.find_one({"appid":review["appid"]})
     if "spy" in app and "price" in app["spy"] and app["spy"]["price"] == "0":
         continue
@@ -39,5 +39,5 @@ for k in d:
 
 sorted_d = OrderedDict( sorted(t.items(), key=operator.itemgetter(1),reverse=True))
 
-with open ("./output.json", 'w') as ft:
+with open ("./output_with_addict.json", 'w') as ft:
     json.dump(sorted_d, ft)
