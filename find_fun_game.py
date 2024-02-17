@@ -8,7 +8,8 @@ import operator
 fun_word = "addict"
 
 if __name__ == '__main__':
-    infos = myinfo.find({"type":"game","total_reviews":{"$gt":1000,"$lt":100000}})
+    infos = myinfo.find({"type":"game","total_reviews":{"$gt":500,"$lt":10000}})
+    
     print "{0} games to find".format(infos.count())
 
     count = 0
@@ -26,6 +27,7 @@ if __name__ == '__main__':
         print "{0}/{1}".format(count,infos.count())
 
     allInfoSort = sorted(allInfoSort, key = operator.itemgetter("fun_count"))
+    #allInfoSort = sorted(allInfoSort, key = operator.itemgetter("fun_rate"))
 
     for info in allInfoSort:
         rate = info["fun_count"] * 1.0 / info["total_reviews"]

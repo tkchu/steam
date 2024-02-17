@@ -9,22 +9,6 @@ rgOwnedApps = [20, 50, 70, 130, 220, 280, 320, 340, 360, 364, 380, 400, 420, 550
 if __name__ == '__main__':
     app_review ={}
     for k in rgOwnedApps:
-        info = myinfo.find_one({"appid":k,"total_reviews":{"$gt":1000}, "is_free":False,})
-        if info and u"total_reviews" in info:
-            app_review[k] = info[u"total_reviews"]
-    import operator
-    sorted_app_reviews = sorted(app_review.items(), key=operator.itemgetter(1))
-    for k in sorted_app_reviews:
-        try:
-            print str(k[1]) +":" + str(k[0]) + ":" + myinfo.find_one({"appid":k[0]})[u"name"]
-        except Exception as e:
-            pass
+        info = myinfo.find_one({"appid":k,"supported_language":{"$gt":1000}, "is_free":False,})
 
-    """
-    allapp = myinfo.find({"type":"game","total_reviews":{"$gt":5000}, "is_free":False,"price_overview.initial":{"$lt":2000}}).sort("total_reviews",-1)
-    for app in allapp:
-        try:
-            print str(app["total_reviews"]) + ":" + str(app["appid"]) + ":" + app["name"].encode("utf8")
-        except Exception as e:
-            pass
-"""
+""

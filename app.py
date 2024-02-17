@@ -96,10 +96,23 @@ def updateDetail(appid, detail):
         except Exception as e:
             print e
 
-if __name__ == '__main__':
-    #allappids = getAppids()
-    allappids = [x for x in getAppids() if checkNeedUpdateAppid(x)]
+def mainFindNew():
+    allappids = set([x for x in getAppids()])
+    allexist = set(myinfo.distinct("appid"))
+    allappids = allappids - allexist
+
     for i, appid in enumerate(allappids):
         print "====appid:{0}:{1}/{2}====".format(appid,i,len(allappids))
         detail = getDetail(appid)
         updateDetail(appid, detail)
+
+def mainFixAll():
+    allappids = [x for x in getAppids() if checkNeedUpdateAppid(x)]
+
+    for i, appid in enumerate(allappids):
+        print "====appid:{0}:{1}/{2}====".format(appid,i,len(allappids))
+        detail = getDetail(appid)
+        updateDetail(appid, detail)
+
+if __name__ == '__main__':
+    mainFindNew()

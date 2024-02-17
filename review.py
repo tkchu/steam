@@ -15,9 +15,14 @@ REVIEW_URL = "https://store.steampowered.com/appreviews/{0}?json=1&language=all&
 
 def updateTotalReview(appid, reviewListJson):
     reviewStatus = {}
-    reviewStatus["total_positive"] = reviewListJson["query_summary"]["total_positive"]
-    reviewStatus["total_negative"] = reviewListJson["query_summary"]["total_negative"]
-    reviewStatus["total_reviews"] = reviewListJson["query_summary"]["total_reviews"]
+    try:
+        reviewStatus["total_positive"] = reviewListJson["query_summary"]["total_positive"]
+        reviewStatus["total_negative"] = reviewListJson["query_summary"]["total_negative"]
+        reviewStatus["total_reviews"] = reviewListJson["query_summary"]["total_reviews"]    
+    except Exception as e:
+        reviewStatus["total_positive"] = 0
+        reviewStatus["total_negative"] = 0
+        reviewStatus["total_reviews"] = 0
 
     myquery = {"appid":appid}
     newvalues = {"$set":reviewStatus}
@@ -122,19 +127,21 @@ def getAppReviewByID(appid, cursor ="*"):
     return getAppReview(info,cursor)
 
 def getAppids():
-    appInfos = [ x for x in myinfo.find({"type":"game","review_update_time":{"$exists":False}})]
+    appInfos = [ x for x in myinfo.find()]
+    #appInfos = [ x for x in myinfo.find({"type":"game","is_free":False})]
+    #appInfos = [ x for x in myinfo.find({"type":"game","review_update_time":{"$exists":False}})]
     #appInfos = [ x for x in myinfo.find({"type":"game","review_update_time":{"$exists":False},"is_free":False })]
     #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$gt":2000,"$lt":12000},"last_update_time":{"$exists":True}})]
+    #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$lt":5*10000*100}})]
     #appInfos = [x for x in myinfo.find({"type":"game","total_reviews":{"$exists":True} })]
     #appInfos = [x for x in myinfo.find({"appid":1076600})]
-    appids = [x['appid'] for x in appInfos if 'appid' in x]
+    appids = [x['appid'] for x in appInfos if 'appid' in x and ("review_update_time" not in x or "review_update_time" in x and (datetime.datetime.now()- x["review_update_time"]).days > 30)]
+    #appids = [x['appid'] for x in appInfos if 'appid' in x]
     return appids
 
 if __name__ == '__main__':
-    #getAppReviewByID(730,"AoJ4ibXD3tICfIKeUA==")
-    
     count = 0
-    appids = sorted(getAppids())
+    appids = sorted(getAppids())[::-1]
     appidsLen = len(appids)
     for i,appid in enumerate(appids):
         print "====appid now {0} is {1}/{2}=====".format(appid, i, appidsLen)
