@@ -17,24 +17,25 @@ def send_req(url):
     global waitTime
     retryTimes = 1
     response = None
+    result = None
+
     while retryTimes > 0:
+        try:
+            response = urllib2.urlopen(url)
+            if response:
+                result = response.read()
+        except Exception as e:
+            print(e)
+            print(time.strftime('%Y-%m-%d %H:%M:%S'))
+
         sleepTime = lastTime + waitTime - time.time()
         if(sleepTime > 0):
             print(time.strftime('%Y-%m-%d %H:%M:%S sleep for' + str(sleepTime)))
             time.sleep(sleepTime)
         lastTime = time.time()
-
-        try:
-            response = urllib2.urlopen(url)
-            if response:
-                return response.read()
-            else:
-                return None
-        except Exception as e:
-            #time.sleep(15)
-            print(e)
-            print(time.strftime('%Y-%m-%d %H:%M:%S'))
         retryTimes -= 1
+
+    return result
 
 def merge_two_dicts(x, y):
     if not x:

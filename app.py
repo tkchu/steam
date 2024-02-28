@@ -36,14 +36,12 @@ def getDetail(appid):
         return None
 
 def getNeedUpdateAppids():
-    result = set()
-    #没有更新过的要更新
-    result.update([info["appid"] for info in myinfo.find({"type":"game","review_update_time":{"$exists":False},"try_times":{"$lt": 5}})])
-    #上次更新到今天超过30天的游戏才会列入更新
     pass_time = datetime.datetime.now() - datetime.timedelta(days = 30) 
-    result.update([info["appid"] for info in myinfo.find({"type":"game","review_update_time":{"$lt": pass_time},"try_times":{"$lt": 5}})])
-    #临时：不是USD的也要改
-    result.update([info["appid"] for info in myinfo.find({"type":"game","price_overview":{"$exists":True},"price_overview.currency": {"$ne": "USD"}})])
+    #没有更新过的游戏要更新，上次更新到今天超过30天的游戏也会列入更新
+    result = [info["appid"] for info in myinfo.find({
+        "type":"game",
+        "last_update_time":{"$lt": pass_time}
+        })]
     return result
 
 def updateDetail(appid, detail):
@@ -58,6 +56,8 @@ def updateDetail(appid, detail):
             elif oldInfo['type'] == False:
                 myinfo.update_one({"appid":appid}, {'$inc': {'try_times': 1}})
                 print "update_False_detail:" + str(appid)
+            else:
+                print "update_None_detail:" + str(appid)
         except Exception as e:
             print appid,e
     else:
@@ -76,15 +76,14 @@ def main():
     allappids = set([x for x in getAppids()])
     #先处理新的游戏
     print "----INSERTING NEW----"
-    allexist = set(myinfo.distinct("appid"))
-    allnew = allappids - allexist
+    allnew = allappids - set(myinfo.distinct("appid"))
     for i, appid in enumerate(allnew):
         print "====new appid:{0}:{1}/{2}====".format(appid,i,len(allnew))
         detail = getDetail(appid)
         updateDetail(appid, detail)
     #然后更新已有的游戏
     print "----UPDATEING OLD----"
-    allupdate = getNeedUpdateAppids()
+    allupdate =allappids.intersection(set(getNeedUpdateAppids()))
     for i, appid in enumerate(allupdate):
         print "====update appid:{0}:{1}/{2}====".format(appid,i,len(allupdate))
         detail = getDetail(appid)
