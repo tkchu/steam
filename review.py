@@ -132,7 +132,7 @@ def getAppids():
     appids = [info['appid']  for info in myinfo.find(
         {
         "type":"game",
-        "is_free":False,
+        #"is_free":False,
         "total_reviews":{"$gt":100},
         "appid":{"$exists":True},
         "$or":[
@@ -145,7 +145,7 @@ def getAppids():
 
 def main():
     count = 0
-    appids = sorted(getAppids())
+    appids = sorted(getAppids())[::-1]
     appidsLen = len(appids)
     for i,appid in enumerate(appids):
         print "====appid now {0} is {1}/{2}=====".format(appid, i, appidsLen)
