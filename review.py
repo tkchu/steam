@@ -127,7 +127,7 @@ def getAppReviewByID(appid, cursor ="*"):
 
 
 def getAppids():
-    pass_time = datetime.datetime.now() - datetime.timedelta(days = 30) #上次更新到今天超过30天的游戏才会列入更新
+    pass_time = datetime.datetime.now() - datetime.timedelta(days = 365) #上次更新到今天超过365天的游戏才会列入更新
 
     appids = [info['appid']  for info in myinfo.find(
         {

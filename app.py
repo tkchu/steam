@@ -36,8 +36,8 @@ def getDetail(appid):
         return None
 
 def getNeedUpdateAppids():
-    pass_time = datetime.datetime.now() - datetime.timedelta(days = 30) 
-    #没有更新过的游戏要更新，上次更新到今天超过30天的游戏也会列入更新
+    pass_time = datetime.datetime.now() - datetime.timedelta(days = 365) 
+    #没有更新过的游戏要更新，上次更新到今天超过365天的游戏也会列入更新
     result = [info["appid"] for info in myinfo.find({
         "type":"game",
         "last_update_time":{"$lt": pass_time}
