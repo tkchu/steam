@@ -133,14 +133,16 @@ def getAppids():
         {
         "type":"game",
         #"is_free":False,
-        "total_reviews":{"$gt":100},
         "appid":{"$exists":True},
         "$or":[
             {"review_update_time":{"$exists":False}},
-            {"review_update_time":{"$lt": pass_time}}
+            {"review_update_time":{"$lt": pass_time}},
+            ],
+        "$or":[
+            {"total_reviews":{"$exists":False}},
+            {"total_reviews":{"$gt": 100}}
             ]
-        }
-        )]
+        })]
     return appids
 
 def main():
