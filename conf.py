@@ -8,11 +8,12 @@ myclient = pymongo.MongoClient('mongodb://localhost:27017/')
 mydb = myclient["remote"]
 myinfo = mydb['info']
 myreview = mydb['review']
+mydata = mydb['data']
 
 lastTime = time.time()
 waitTime = 5*60.0/195
 
-def send_req(url):
+def send_req(url, wait = True):
     global lastTime
     global waitTime
     retryTimes = 1
@@ -29,7 +30,7 @@ def send_req(url):
             print(time.strftime('%Y-%m-%d %H:%M:%S'))
 
         sleepTime = lastTime + waitTime - time.time()
-        if(sleepTime > 0):
+        if(sleepTime > 0 and wait):
             print(time.strftime('%Y-%m-%d %H:%M:%S sleep for' + str(sleepTime)))
             time.sleep(sleepTime)
         lastTime = time.time()

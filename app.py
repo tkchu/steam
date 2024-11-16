@@ -8,6 +8,8 @@ import datetime
 
 APPLIST_URL = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
 DETAIL_URL = "http://store.steampowered.com/api/appdetails/?appids={0}&cc=us&l=en"
+DATA_URL = "https://api.steamcmd.net/v1/info/{0}"
+
 
 def getAppids():
     """获取所有steam游戏列表"""
@@ -34,6 +36,48 @@ def getDetail(appid):
         return result['data']
     else:
         return None
+
+def getNeedDataAppids():
+    appids = [info['appid']  for info in myinfo.find(
+        {
+        "type":"game",
+        "is_free":False,
+        "appid":{"$exists":True},
+        "total_reviews":{"$gt":100}
+        })]
+    return appids
+
+def getData(appid):
+    """从www.steamcmd.net获取steam游戏的信息
+    """
+    oldData = mydata.find_one({"appid":appid})
+    if oldData:
+        print "already get data"
+        return
+    response = send_req(DATA_URL.format(appid), wait = False)
+    if not response:
+        return
+    content = json.loads(response.decode("utf8"))
+    if content['status'] == "success":
+        result = content['data'][str(appid)]
+        result['appid'] = appid
+        return result
+    else:
+        return None
+
+def updateData(appid, data):
+    if not data:
+        return
+    oldData = mydata.find_one({"appid":appid})
+    if oldData:
+        print "already get " + str(appid) + " data"
+        return
+    newData = {"appid":appid,"last_update_time":datetime.datetime.now()}
+    newData = merge_two_dicts(newData, data)
+    try:
+        mydata.insert_one(newData)
+    except Exception as e:
+        print appid, e
 
 def getNeedUpdateAppids():
     pass_time = datetime.datetime.now() - datetime.timedelta(days = 365) 
@@ -83,11 +127,20 @@ def main():
         updateDetail(appid, detail)
     #然后更新已有的游戏
     print "----UPDATEING OLD----"
-    allupdate =allappids.intersection(set(getNeedUpdateAppids()))
+    allupdate = allappids.intersection(set(getNeedUpdateAppids()))
     for i, appid in enumerate(allupdate):
         print "====update appid:{0}:{1}/{2}====".format(appid,i,len(allupdate))
         detail = getDetail(appid)
         updateDetail(appid, detail)
+    #最后从steamcmd上获得tag信息
+    data_appids = getNeedDataAppids()
+    data_appids_len =len(data_appids)
+    i = 0
+    for appid in allappids:
+        i+=1
+        print "{2}/{3} data:{0}:{1}".format(appid,time.strftime('%Y-%m-%d %H:%M:%S'),i,data_appids_len)
+        data = getData(appid)
+        updateData(appid,data)
 
 if __name__ == '__main__':
     main()
