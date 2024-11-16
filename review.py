@@ -13,6 +13,8 @@ import time
 REVIEW_URL = "https://store.steampowered.com/appreviews/{0}?json=1&language=all&filter=recent&cursor={1}&num_per_page=100&review_type=all&purchase_type=all"
 # 此api每天仅能调用100000次，见 https://steamcommunity.com/dev/apiterms
 
+review_update_day = 30 #上次更新到今天超过一定天数的游戏才会列入更新
+
 def updateTotalReview(appid, reviewListJson):
     reviewStatus = {}
     try:
@@ -96,16 +98,16 @@ def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
 def checkFindSameReviewAndBreak(appidInfo):
     #如果之前有update，那么找到相同的review就结束并返回
     result = False
-    if "review_update_time" in appidInfo and (datetime.datetime.now()- appidInfo["review_update_time"]).days < 30:
+    if "review_update_time" in appidInfo and (datetime.datetime.now()- appidInfo["review_update_time"]).days < review_update_day:
         print "already get when {0}".format(appidInfo["review_update_time"])
+        result = True
+    elif "total_reviews" in appidInfo and appidInfo["total_reviews"] > 1000000:
         result = True
     return result
 
 def getAppReview(appidInfo, cursor="*"):
     findSameReviewAndBreak = checkFindSameReviewAndBreak(appidInfo)
-    
     if findSameReviewAndBreak:
-        # TEMP临时处理，目前只要有review就直接返回，而不是按道理的一直到找到重复的再返回
         return None
     appid = appidInfo["appid"]
 
@@ -127,7 +129,7 @@ def getAppReviewByID(appid, cursor ="*"):
 
 
 def getAppids():
-    pass_time = datetime.datetime.now() - datetime.timedelta(days = 365) #上次更新到今天超过365天的游戏才会列入更新
+    pass_time = datetime.datetime.now() - datetime.timedelta(days = review_update_day)
 
     appids = [info['appid']  for info in myinfo.find(
         {
@@ -138,10 +140,6 @@ def getAppids():
             {"review_update_time":{"$exists":False}},
             {"review_update_time":{"$lt": pass_time}},
             ],
-        "$or":[
-            {"total_reviews":{"$exists":False}},
-            {"total_reviews":{"$gt": 100}}
-            ]
         })]
     return appids
 
