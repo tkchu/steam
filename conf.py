@@ -1,11 +1,11 @@
 # -*- coding:utf8 -*-
-import urllib2
+import requests
 import time
 import pymongo
 
 myclient = pymongo.MongoClient('mongodb://localhost:27017/')
 
-mydb = myclient["remote"]
+mydb = myclient["test"]
 myinfo = mydb['info']
 myreview = mydb['review']
 mydata = mydb['data']
@@ -22,9 +22,9 @@ def send_req(url, wait = True):
 
     while retryTimes > 0:
         try:
-            response = urllib2.urlopen(url)
+            response = requests.get(url)
             if response:
-                result = response.read()
+                result = response.json()
         except Exception as e:
             print(e)
             print(time.strftime('%Y-%m-%d %H:%M:%S'))

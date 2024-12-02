@@ -18,7 +18,7 @@ def getAppids():
     response = send_req(APPLIST_URL)
     if not response:
         return
-    applistJson = json.loads(response.decode("utf8"))
+    applistJson = response
     appids = [i['appid'] for i in applistJson["applist"]["apps"]]
     return appids
 
@@ -30,7 +30,7 @@ def getDetail(appid):
     response = send_req(DETAIL_URL.format(appid))
     if not response:
         return
-    content = json.loads(response.decode("utf8"))
+    content = response
     appid = int([k for k in content.keys()][0])
     result = [v for v in content.values()][0]
     result["appid"] = appid
@@ -56,7 +56,7 @@ def getData(appid):
     """
     oldData = mydata.find_one({"appid":appid})
     if oldData:
-        print "already get data"
+        print("already get data")
         return
     response = send_req(DATA_URL.format(appid), wait = False)
     if not response:
@@ -74,14 +74,14 @@ def updateData(appid, data):
         return
     oldData = mydata.find_one({"appid":appid})
     if oldData:
-        print "already get " + str(appid) + " data"
+        print("already get " + str(appid) + " data")
         return
     newData = {"appid":appid,"last_update_time":datetime.datetime.now()}
     newData = merge_two_dicts(newData, data)
     try:
         mydata.insert_one(newData)
     except Exception as e:
-        print appid, e
+        print(appid, e)
 
 def getNeedUpdateAppids():
     pass_time = datetime.datetime.now() - datetime.timedelta(days = 365) 
@@ -100,40 +100,40 @@ def updateDetail(appid, detail):
             if not oldInfo:
                 newInfo = merge_two_dicts(newInfo, {"appid":appid,"type":False,"try_times":1}) # try_times已经尝试过的次数
                 myinfo.insert_one(newInfo)
-                print "insert_False_detail:" + str(appid)
+                print("insert_False_detail:" + str(appid))
             elif oldInfo['type'] == False:
                 myinfo.update_one({"appid":appid}, {'$inc': {'try_times': 1}})
-                print "update_False_detail:" + str(appid)
+                print("update_False_detail:" + str(appid))
             else:
-                print "update_None_detail:" + str(appid)
+                print("update_None_detail:" + str(appid))
         except Exception as e:
-            print appid,e
+            print(appid,e)
     else:
         newInfo = merge_two_dicts(newInfo, detail)
         try:
             if oldInfo:
                 myinfo.update_one({"appid":appid},{"$set":newInfo},upsert=True)
-                print "update_Old_Info:" + str(appid)
+                print("update_Old_Info:" + str(appid))
             else:
                 myinfo.insert_one(newInfo)
-                print "insert_New_Info:" + str(appid)
+                print("insert_New_Info:" + str(appid))
         except Exception as e:
-            print appid, e
+            print(appid, e)
 
 def main():
     allappids = set([x for x in getAppids()])
     #先处理新的游戏
-    print "----INSERTING NEW----"
+    print("----INSERTING NEW----")
     allnew = allappids - set(myinfo.distinct("appid"))
     for i, appid in enumerate(allnew):
-        print "====new appid:{0}:{1}/{2}====".format(appid,i,len(allnew))
+        print("====new appid:{0}:{1}/{2}====".format(appid,i,len(allnew)))
         detail = getDetail(appid)
         updateDetail(appid, detail)
     #然后更新已有的游戏
-    print "----UPDATEING OLD----"
+    print("----UPDATEING OLD----")
     allupdate = allappids.intersection(set(getNeedUpdateAppids()))
     for i, appid in enumerate(allupdate):
-        print "====update appid:{0}:{1}/{2}====".format(appid,i,len(allupdate))
+        print("====update appid:{0}:{1}/{2}====".format(appid,i,len(allupdate)))
         detail = getDetail(appid)
         updateDetail(appid, detail)
     #最后从steamcmd上获得tag信息
@@ -142,7 +142,7 @@ def main():
     i = 0
     for appid in data_appids:
         i+=1
-        print "{2}/{3} data:{0}:{1}".format(appid,time.strftime('%Y-%m-%d %H:%M:%S'),i,data_appids_len)
+        print("{2}/{3} data:{0}:{1}".format(appid,time.strftime('%Y-%m-%d %H:%M:%S'),i,data_appids_len))
         data = getData(appid)
         updateData(appid,data)
 
