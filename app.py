@@ -10,6 +10,8 @@ APPLIST_URL = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
 DETAIL_URL = "http://store.steampowered.com/api/appdetails/?appids={0}&cc=us&l=en"
 DATA_URL = "https://api.steamcmd.net/v1/info/{0}"
 
+STEAM_API_KEY = "CC7C14E1120AE700523D2D77F03693F1"
+TAGLIST_URL = "https://api.steampowered.com/IStoreService/GetMostPopularTags/v1/?key={0}&language=schinese"
 
 def getAppids():
     """获取所有steam游戏列表"""
@@ -38,12 +40,14 @@ def getDetail(appid):
         return None
 
 def getNeedDataAppids():
+    pass_time = datetime.datetime.now() - datetime.timedelta(days = 365) 
     appids = [info['appid']  for info in myinfo.find(
         {
         "type":"game",
         "is_free":False,
         "appid":{"$exists":True},
-        "total_reviews":{"$gt":100}
+        "total_reviews":{"$gt":50},
+        "last_update_time":{"$lt": pass_time}
         })]
     return appids
 
@@ -136,7 +140,7 @@ def main():
     data_appids = getNeedDataAppids()
     data_appids_len =len(data_appids)
     i = 0
-    for appid in allappids:
+    for appid in data_appids:
         i+=1
         print "{2}/{3} data:{0}:{1}".format(appid,time.strftime('%Y-%m-%d %H:%M:%S'),i,data_appids_len)
         data = getData(appid)
