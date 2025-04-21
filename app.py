@@ -8,7 +8,7 @@ import datetime
 
 APPLIST_URL = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
 DETAIL_URL = "http://store.steampowered.com/api/appdetails/?appids={0}&cc=us&l=en"
-DATA_URL = "https://api.steamcmd.net/v1/info/{0}"
+CMD_URL = "https://api.steamcmd.net/v1/info/{0}"
 
 STEAM_API_KEY = "CC7C14E1120AE700523D2D77F03693F1"
 TAGLIST_URL = "https://api.steampowered.com/IStoreService/GetMostPopularTags/v1/?key={0}&language=schinese"
@@ -54,11 +54,11 @@ def getNeedDataAppids():
 def getData(appid):
     """从www.steamcmd.net获取steam游戏的信息
     """
-    oldData = mydata.find_one({"appid":appid})
+    oldData = mycmd.find_one({"appid":appid})
     if oldData:
         print("already get data")
         return
-    response = send_req(DATA_URL.format(appid), wait = False)
+    response = send_req(CMD_URL.format(appid), wait = False)
     if not response:
         return
     content = json.loads(response.decode("utf8"))
@@ -69,17 +69,17 @@ def getData(appid):
     else:
         return None
 
-def updateData(appid, data):
+def updateCMD(appid, data):
     if not data:
         return
-    oldData = mydata.find_one({"appid":appid})
+    oldData = mycmd.find_one({"appid":appid})
     if oldData:
         print("already get " + str(appid) + " data")
         return
     newData = {"appid":appid,"last_update_time":datetime.datetime.now()}
     newData = merge_two_dicts(newData, data)
     try:
-        mydata.insert_one(newData)
+        mycmd.insert_one(newData)
     except Exception as e:
         print(appid, e)
 
@@ -144,7 +144,7 @@ def main():
         i+=1
         print("{2}/{3} data:{0}:{1}".format(appid,time.strftime('%Y-%m-%d %H:%M:%S'),i,data_appids_len))
         data = getData(appid)
-        updateData(appid,data)
+        updateCMD(appid,data)
 
 if __name__ == '__main__':
     main()

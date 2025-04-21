@@ -12,7 +12,7 @@ import requests
 REVIEW_URL = "https://store.steampowered.com/appreviews/{0}?json=1&language=all&filter=recent&cursor={1}&num_per_page=100&review_type=all&purchase_type=all"
 # 此api每天仅能调用100000次，见 https://steamcommunity.com/dev/apiterms
 
-review_update_day = 0 #上次更新到今天超过一定天数的游戏才会列入更新
+review_update_day = 30 #上次更新到今天超过一定天数的游戏才会列入更新
 
 def updateTotalReview(appid, reviewListJson):
     reviewStatus = {}
@@ -39,7 +39,7 @@ countTime = datetime.datetime.now()
 
 def CheckAPILimit():
     global count, countMax, countTime
-    if (datetime.datetime.now()- countTime).days>1:
+    if datetime.datetime.now()- countTime>datetime.timedelta(seconds = 86400):
         countTime = datetime.datetime.now()
         count = 0
     count += 1
@@ -76,7 +76,7 @@ def getOneAppReview(appid, cursor, findSameReviewAndBreak = False):
         appcount = 0
         appreview = updateTotalReview(appid, reviewListJson)
     appcount +=1
-    print("try get reviews appid:{0}::{1}:{2}/{3}".format(appid,cursor, appcount, (appreview-1)/100+2))
+    print("try get reviews appid:{0}::{1}:{2}/{3}".format(appid,cursor, appcount, int((appreview-1)/100+2)))
 
     for review in reviewListJson["reviews"]:
         review["appid"] = appid

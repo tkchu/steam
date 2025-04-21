@@ -5,10 +5,10 @@ import pymongo
 
 myclient = pymongo.MongoClient('mongodb://localhost:27017/')
 
-mydb = myclient["test"]
+mydb = myclient["remote"]
 myinfo = mydb['info']
 myreview = mydb['review']
-mydata = mydb['data']
+mycmd = mydb['cmd']
 
 lastTime = time.time()
 waitTime = 5*60.0/195
