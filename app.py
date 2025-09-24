@@ -61,13 +61,15 @@ def getData(appid):
     response = send_req(CMD_URL.format(appid), wait = False)
     if not response:
         return
-    content = json.loads(response.decode("utf8"))
-    if content['status'] == "success":
-        result = content['data'][str(appid)]
-        result['appid'] = appid
-        return result
-    else:
-        return None
+    try:
+        content = json.loads(response.decode("utf8"))
+        if content['status'] == "success":
+            result = content['data'][str(appid)]
+            result['appid'] = appid
+            return result
+    except Exception as e:
+        print(e)
+    return None
 
 def updateCMD(appid, data):
     if not data:
