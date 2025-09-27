@@ -12,7 +12,7 @@ import requests
 REVIEW_URL = "https://store.steampowered.com/appreviews/{0}?json=1&language=all&filter=recent&cursor={1}&num_per_page=100&review_type=all&purchase_type=all"
 # 此api每天仅能调用100000次，见 https://steamcommunity.com/dev/apiterms
 
-review_update_day = 30 #上次更新到今天超过一定天数的游戏才会列入更新
+review_update_day = 100 #上次更新到今天超过一定天数的游戏才会列入更新
 review_max_num = 200000 #超过20w评论的游戏恐怕不是一个人能做出来的
 review_min_num = 1000 #低于1k评论的游戏，参考价值比较低
 
